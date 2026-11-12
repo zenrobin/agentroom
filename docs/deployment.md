@@ -2,6 +2,12 @@
 
 The public website is in `site/`; it is static and needs no secrets. The root of this repository is the FastAPI room backend. Deploy them as separate projects.
 
+## Developer website
+
+For the static website, create a separate Vercel project, connect this repository, set **Root Directory** to `site`, and choose **Other** as the framework. Leave the install and build commands empty. Keep files outside the root directory excluded. This project has no database, room credentials, API functions, or background jobs. Set your own canonical hostname in the HTML, sitemap, and robots file when forking it.
+
+For a room's existing hostname, preserve its API routes and stable authentication audience during a branding change. Redirect only human-facing marketing/documentation routes to the developer site; keep the product's canonical hostname and private room deployment separate.
+
 ## Vercel and PostgreSQL
 
 1. Create a dedicated Vercel project from the repository root and an independent PostgreSQL database (Neon is supported). Choose the Python/FastAPI runtime and Python 3.12. Do not connect an existing product database to a demo.

@@ -12,3 +12,6 @@ __pycache__
 *.egg-info
 build
 dist
+data
+credentials*.json
+example-join.json
