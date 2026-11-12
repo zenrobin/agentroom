@@ -1,0 +1,190 @@
+[
+  {
+    "id": "936bf02c-b591-40b1-bf20-53e52d2bb78b",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T13:00:00.000Z",
+    "type": "chat",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "text": "hello"
+    }
+  },
+  {
+    "id": "821ba710-c3e5-4dc1-bd56-8d035c93d289",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T13:00:00.000Z",
+    "type": "request",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "action": "pickup",
+      "params": {}
+    }
+  },
+  {
+    "id": "3ab15115-2e67-4804-8c75-8528b49959dd",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T13:00:00.000Z",
+    "type": "response",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "ok": true,
+      "result": {}
+    },
+    "reply_to": "50583157-5cb9-4ee9-9c4f-0bfa306b260e"
+  },
+  {
+    "id": "f7b01d3f-c5cd-4b9f-9874-b7c4d5d392d7",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T13:00:00.000Z",
+    "type": "event",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "name": "done",
+      "data": {}
+    }
+  },
+  {
+    "id": "8dccb2b0-cfa6-42b8-a2c7-463a528ce696",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T13:00:00.000Z",
+    "type": "propose",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "subject": "Pickup",
+      "terms": {
+        "day": "Thursday"
+      }
+    },
+    "to": [
+      "m_recipient"
+    ]
+  },
+  {
+    "id": "67afd25e-065c-434a-94a3-c13856aea5ac",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T13:00:00.000Z",
+    "type": "counter",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "negotiation_id": "f93e3cb8-915b-4040-9f37-2d7574103147",
+      "base_version": 1,
+      "terms": {
+        "day": "Friday"
+      }
+    },
+    "to": [
+      "m_recipient"
+    ]
+  },
+  {
+    "id": "29add166-74d7-48cc-944c-4c8c254d460b",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T13:00:00.000Z",
+    "type": "accept",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "negotiation_id": "f93e3cb8-915b-4040-9f37-2d7574103147",
+      "version": 1,
+      "terms_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "to": [
+      "m_recipient"
+    ]
+  },
+  {
+    "id": "16cb4e70-43f8-46ec-b30c-c273e683b2b0",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T13:00:00.000Z",
+    "type": "decline",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "negotiation_id": "f93e3cb8-915b-4040-9f37-2d7574103147",
+      "version": 1
+    },
+    "to": [
+      "m_recipient"
+    ]
+  },
+  {
+    "id": "ebfce0cc-e1f4-4fa3-9034-b9687c6add29",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T13:00:00.000Z",
+    "type": "withdraw",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "negotiation_id": "f93e3cb8-915b-4040-9f37-2d7574103147"
+    },
+    "to": [
+      "m_recipient"
+    ]
+  },
+  {
+    "id": "c54a74b7-1db4-4b7c-9085-b8c7662581dd",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T13:00:00.000Z",
+    "type": "chat",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "text": "hello"
+    },
+    "to": [
+      "m_a"
+    ]
+  },
+  {
+    "id": "c54a74b7-1db4-4b7c-9085-b8c7662581dd",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T13:00:00.000Z",
+    "type": "chat",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "text": "hello"
+    },
+    "from": "m_a"
+  },
+  {
+    "id": "c54a74b7-1db4-4b7c-9085-b8c7662581dd",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T13:00:00.000Z",
+    "type": "chat",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "text": "hello"
+    },
+    "reply_to": null
+  },
+  {
+    "id": "c54a74b7-1db4-4b7c-9085-b8c7662581dd",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T13:00:00.000Z",
+    "type": "chat",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "text": ""
+    }
+  },
+  {
+    "id": "c54a74b7-1db4-4b7c-9085-b8c7662581dd",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T09:00:00-04:00",
+    "type": "chat",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "text": "hello"
+    }
+  },
+  {
+    "id": "c54a74b7-1db4-4b7c-9085-b8c7662581dd",
+    "nonce": "nnnnnnnnnnnnnnnnnnnnnn",
+    "ts": "2026-10-27T13:00:00.000Z",
+    "type": "chat",
+    "thread_id": "86a25ce9-2fef-45a8-8a30-c7c0d80f9683",
+    "body": {
+      "text": "hello"
+    },
+    "to": [
+      "m_a",
+      "m_b"
+    ]
+  }
+]

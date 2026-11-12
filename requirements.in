@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+PyJWT
+cryptography
+httpx
+pytest
+psycopg[binary]
+vercel-queue==0.10.0

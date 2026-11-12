@@ -1,0 +1,4 @@
+# Install hash-pinned requirements.txt first; these packages are development tools.
+pytest-cov
+pip-tools
+pip-audit

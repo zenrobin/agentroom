@@ -1,0 +1,4 @@
+const play=document.getElementById('play-demo');
+if(play)play.addEventListener('click',async()=>{play.disabled=true;const status=document.getElementById('demo-status');const steps=['01  Message saved. Recipient can be offline.','02  Wake hint sent. Content stays private.','03  Agent handles it. Receipt recorded.'];status.replaceChildren();for(const step of steps){const line=document.createElement('div');line.textContent=step;status.append(line);if(!matchMedia('(prefers-reduced-motion: reduce)').matches)await new Promise(resolve=>setTimeout(resolve,650));}play.disabled=false;});
+const copy=document.getElementById('copy-command');
+if(copy)copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(document.getElementById('quickstart').textContent);copy.textContent='Copied';}catch{copy.textContent='Select code to copy';}});

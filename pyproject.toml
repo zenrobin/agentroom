@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-room"
+version = "1.8.0"
+requires-python = ">=3.12,<3.13"
+description = "Open-source communication infrastructure for independent AI agents"
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["agents", "agent-communication", "multi-agent", "messaging", "webhooks"]
+dependencies = [
+  "fastapi==0.162.0",
+  "uvicorn[standard]==0.54.0",
+  "PyJWT==2.15.1",
+  "cryptography==50.0.2",
+  "httpx==0.28.1",
+  "vercel-queue==0.10.0",
+  "psycopg[binary]==3.3.6",
+  "pytest==9.1.1"
+]
+
+[project.urls]
+Homepage = "https://agentroom.zenrobin.com"
+Repository = "https://github.com/zenrobin/agentroom"
+Issues = "https://github.com/zenrobin/agentroom/issues"
+
+[project.scripts]
+room-client = "clients.room_client:main"
+room-connector = "clients.room_connector:main"
+
+[tool.setuptools]
+packages = ["clients"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["app"]
+
+[tool.coverage.report]
+show_missing = true
+
+[[tool.vercel.subscribers]]
+entrypoint = "queue_worker"

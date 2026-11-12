@@ -1,0 +1,1096 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Accept": {
+      "additionalProperties": false,
+      "properties": {
+        "negotiation_id": {
+          "format": "uuid",
+          "title": "Negotiation Id",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "terms_hash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Terms Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "negotiation_id",
+        "version",
+        "terms_hash"
+      ],
+      "title": "Accept",
+      "type": "object"
+    },
+    "AcceptMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "nonce": {
+          "pattern": "^[A-Za-z0-9_-]{22,64}$",
+          "title": "Nonce",
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "From"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To",
+          "uniqueItems": true
+        },
+        "thread_id": {
+          "format": "uuid",
+          "title": "Thread Id",
+          "type": "string"
+        },
+        "reply_to": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reply To"
+        },
+        "type": {
+          "const": "accept",
+          "title": "Type",
+          "type": "string"
+        },
+        "body": {
+          "$ref": "#/$defs/Accept"
+        }
+      },
+      "required": [
+        "id",
+        "nonce",
+        "ts",
+        "thread_id",
+        "type",
+        "body"
+      ],
+      "title": "AcceptMessage",
+      "type": "object"
+    },
+    "Chat": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "maxLength": 8000,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "Chat",
+      "type": "object"
+    },
+    "ChatMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "nonce": {
+          "pattern": "^[A-Za-z0-9_-]{22,64}$",
+          "title": "Nonce",
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "From"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To",
+          "uniqueItems": true
+        },
+        "thread_id": {
+          "format": "uuid",
+          "title": "Thread Id",
+          "type": "string"
+        },
+        "reply_to": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reply To"
+        },
+        "type": {
+          "const": "chat",
+          "title": "Type",
+          "type": "string"
+        },
+        "body": {
+          "$ref": "#/$defs/Chat"
+        }
+      },
+      "required": [
+        "id",
+        "nonce",
+        "ts",
+        "thread_id",
+        "type",
+        "body"
+      ],
+      "title": "ChatMessage",
+      "type": "object"
+    },
+    "Counter": {
+      "additionalProperties": false,
+      "properties": {
+        "terms": {
+          "additionalProperties": true,
+          "title": "Terms",
+          "type": "object"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expires At"
+        },
+        "negotiation_id": {
+          "format": "uuid",
+          "title": "Negotiation Id",
+          "type": "string"
+        },
+        "base_version": {
+          "minimum": 1,
+          "title": "Base Version",
+          "type": "integer"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "terms",
+        "negotiation_id",
+        "base_version"
+      ],
+      "title": "Counter",
+      "type": "object"
+    },
+    "CounterMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "nonce": {
+          "pattern": "^[A-Za-z0-9_-]{22,64}$",
+          "title": "Nonce",
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "From"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To",
+          "uniqueItems": true
+        },
+        "thread_id": {
+          "format": "uuid",
+          "title": "Thread Id",
+          "type": "string"
+        },
+        "reply_to": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reply To"
+        },
+        "type": {
+          "const": "counter",
+          "title": "Type",
+          "type": "string"
+        },
+        "body": {
+          "$ref": "#/$defs/Counter"
+        }
+      },
+      "required": [
+        "id",
+        "nonce",
+        "ts",
+        "thread_id",
+        "type",
+        "body"
+      ],
+      "title": "CounterMessage",
+      "type": "object"
+    },
+    "Decline": {
+      "additionalProperties": false,
+      "properties": {
+        "negotiation_id": {
+          "format": "uuid",
+          "title": "Negotiation Id",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "negotiation_id",
+        "version"
+      ],
+      "title": "Decline",
+      "type": "object"
+    },
+    "DeclineMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "nonce": {
+          "pattern": "^[A-Za-z0-9_-]{22,64}$",
+          "title": "Nonce",
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "From"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To",
+          "uniqueItems": true
+        },
+        "thread_id": {
+          "format": "uuid",
+          "title": "Thread Id",
+          "type": "string"
+        },
+        "reply_to": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reply To"
+        },
+        "type": {
+          "const": "decline",
+          "title": "Type",
+          "type": "string"
+        },
+        "body": {
+          "$ref": "#/$defs/Decline"
+        }
+      },
+      "required": [
+        "id",
+        "nonce",
+        "ts",
+        "thread_id",
+        "type",
+        "body"
+      ],
+      "title": "DeclineMessage",
+      "type": "object"
+    },
+    "Event": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 64,
+          "title": "Name",
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": true,
+          "title": "Data",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "data"
+      ],
+      "title": "Event",
+      "type": "object"
+    },
+    "EventMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "nonce": {
+          "pattern": "^[A-Za-z0-9_-]{22,64}$",
+          "title": "Nonce",
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "From"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To",
+          "uniqueItems": true
+        },
+        "thread_id": {
+          "format": "uuid",
+          "title": "Thread Id",
+          "type": "string"
+        },
+        "reply_to": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reply To"
+        },
+        "type": {
+          "const": "event",
+          "title": "Type",
+          "type": "string"
+        },
+        "body": {
+          "$ref": "#/$defs/Event"
+        }
+      },
+      "required": [
+        "id",
+        "nonce",
+        "ts",
+        "thread_id",
+        "type",
+        "body"
+      ],
+      "title": "EventMessage",
+      "type": "object"
+    },
+    "Propose": {
+      "additionalProperties": false,
+      "properties": {
+        "terms": {
+          "additionalProperties": true,
+          "title": "Terms",
+          "type": "object"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expires At"
+        },
+        "subject": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Subject",
+          "type": "string"
+        }
+      },
+      "required": [
+        "terms",
+        "subject"
+      ],
+      "title": "Propose",
+      "type": "object"
+    },
+    "ProposeMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "nonce": {
+          "pattern": "^[A-Za-z0-9_-]{22,64}$",
+          "title": "Nonce",
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "From"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To",
+          "uniqueItems": true
+        },
+        "thread_id": {
+          "format": "uuid",
+          "title": "Thread Id",
+          "type": "string"
+        },
+        "reply_to": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reply To"
+        },
+        "type": {
+          "const": "propose",
+          "title": "Type",
+          "type": "string"
+        },
+        "body": {
+          "$ref": "#/$defs/Propose"
+        }
+      },
+      "required": [
+        "id",
+        "nonce",
+        "ts",
+        "thread_id",
+        "type",
+        "body"
+      ],
+      "title": "ProposeMessage",
+      "type": "object"
+    },
+    "RequestBody": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "maxLength": 64,
+          "title": "Action",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "action",
+        "params"
+      ],
+      "title": "RequestBody",
+      "type": "object"
+    },
+    "RequestMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "nonce": {
+          "pattern": "^[A-Za-z0-9_-]{22,64}$",
+          "title": "Nonce",
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "From"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To",
+          "uniqueItems": true
+        },
+        "thread_id": {
+          "format": "uuid",
+          "title": "Thread Id",
+          "type": "string"
+        },
+        "reply_to": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reply To"
+        },
+        "type": {
+          "const": "request",
+          "title": "Type",
+          "type": "string"
+        },
+        "body": {
+          "$ref": "#/$defs/RequestBody"
+        }
+      },
+      "required": [
+        "id",
+        "nonce",
+        "ts",
+        "thread_id",
+        "type",
+        "body"
+      ],
+      "title": "RequestMessage",
+      "type": "object"
+    },
+    "ResponseBody": {
+      "additionalProperties": false,
+      "properties": {
+        "ok": {
+          "title": "Ok",
+          "type": "boolean"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Result"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "ok"
+      ],
+      "title": "ResponseBody",
+      "type": "object"
+    },
+    "ResponseMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "nonce": {
+          "pattern": "^[A-Za-z0-9_-]{22,64}$",
+          "title": "Nonce",
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "From"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To",
+          "uniqueItems": true
+        },
+        "thread_id": {
+          "format": "uuid",
+          "title": "Thread Id",
+          "type": "string"
+        },
+        "reply_to": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reply To"
+        },
+        "type": {
+          "const": "response",
+          "title": "Type",
+          "type": "string"
+        },
+        "body": {
+          "$ref": "#/$defs/ResponseBody"
+        }
+      },
+      "required": [
+        "id",
+        "nonce",
+        "ts",
+        "thread_id",
+        "type",
+        "body"
+      ],
+      "title": "ResponseMessage",
+      "type": "object"
+    },
+    "Withdraw": {
+      "additionalProperties": false,
+      "properties": {
+        "negotiation_id": {
+          "format": "uuid",
+          "title": "Negotiation Id",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "negotiation_id"
+      ],
+      "title": "Withdraw",
+      "type": "object"
+    },
+    "WithdrawMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "nonce": {
+          "pattern": "^[A-Za-z0-9_-]{22,64}$",
+          "title": "Nonce",
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "From"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To",
+          "uniqueItems": true
+        },
+        "thread_id": {
+          "format": "uuid",
+          "title": "Thread Id",
+          "type": "string"
+        },
+        "reply_to": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reply To"
+        },
+        "type": {
+          "const": "withdraw",
+          "title": "Type",
+          "type": "string"
+        },
+        "body": {
+          "$ref": "#/$defs/Withdraw"
+        }
+      },
+      "required": [
+        "id",
+        "nonce",
+        "ts",
+        "thread_id",
+        "type",
+        "body"
+      ],
+      "title": "WithdrawMessage",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "accept": "#/$defs/AcceptMessage",
+      "chat": "#/$defs/ChatMessage",
+      "counter": "#/$defs/CounterMessage",
+      "decline": "#/$defs/DeclineMessage",
+      "event": "#/$defs/EventMessage",
+      "propose": "#/$defs/ProposeMessage",
+      "request": "#/$defs/RequestMessage",
+      "response": "#/$defs/ResponseMessage",
+      "withdraw": "#/$defs/WithdrawMessage"
+    },
+    "propertyName": "type"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ChatMessage"
+    },
+    {
+      "$ref": "#/$defs/RequestMessage"
+    },
+    {
+      "$ref": "#/$defs/ResponseMessage"
+    },
+    {
+      "$ref": "#/$defs/EventMessage"
+    },
+    {
+      "$ref": "#/$defs/ProposeMessage"
+    },
+    {
+      "$ref": "#/$defs/CounterMessage"
+    },
+    {
+      "$ref": "#/$defs/AcceptMessage"
+    },
+    {
+      "$ref": "#/$defs/DeclineMessage"
+    },
+    {
+      "$ref": "#/$defs/WithdrawMessage"
+    }
+  ],
+  "title": "AgentRoomMessageSubmit"
+}

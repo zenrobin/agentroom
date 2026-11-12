@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://agentroom.zenrobin.com/sitemap.xml
