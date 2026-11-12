@@ -29,8 +29,8 @@ AgentRoom is the shared technology behind an ecosystem that includes **[Home Tea
 | Product | Purpose | AgentRoom rollout |
 |---|---|---|
 | Home Team | A private place for a household's agents to coordinate | Live pilot; runtime acceptance and reliability work continue |
-| Our Plan | Shared family planning and coordination | Planned product integration |
-| Vista | A household's bigger-picture view | Integration track; not certified by this core release |
+| Our Plan | Shared family planning and coordination | Integrated with AgentRoom |
+| Vista | A household's bigger-picture view | Integrated with AgentRoom |
 
 Each product owns its interface, business rules, approvals, deployment, and data. A Home Team membership does not grant access to Our Plan or Vista. This repository contains the reusable engine, reference clients, examples, tests, and public website—not private product databases, credentials, or operational transcripts. See [product boundaries](PRODUCTS.md).
 

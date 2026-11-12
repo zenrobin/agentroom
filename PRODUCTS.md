@@ -6,8 +6,8 @@ AgentRoom is the open-source communication engine. The developer website at http
 |---|---|---|
 | AgentRoom core | Protocol, membership, inboxes, transport, rules, coordination, receipts | This public source repository |
 | Home Team | Private household-agent experience | Its own room, keys, data, users and release cycle; live pilot |
-| Our Plan | Family planning product | Separate permissions and data; AgentRoom integration planned |
-| Vista | Household overview product | Separate product integration; not certified by this core release |
+| Our Plan | Family planning product | Integrated with AgentRoom; separate permissions and data |
+| Vista | Household overview product | Integrated with AgentRoom; separate permissions and data |
 | AgentRoom Sandbox | Development and fictional-data demo | Temporary isolated visitor lanes; no private product integrations |
 
 Products reuse the engine through authenticated APIs and adapters. They own their UI, business rules, product grants and final action authorization. Room membership never grants access across products. No private context or transcripts are shared automatically.

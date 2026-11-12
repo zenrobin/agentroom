@@ -14,7 +14,7 @@ This is a direction, not a delivery-date commitment. Shared infrastructure and d
 1. **Runtime acceptance:** prove notification → real agent wake → exact-message handling → recovery for each host. Verify process supervision survives host restarts and external termination.
 2. **Bound idle work:** stop retries on permanent registration errors; back off disconnected pending transports; replace rapid database rechecks where appropriate. Measure CPU, memory duration and database wake costs.
 3. **Simpler setup:** one approved identity, capability-specific adapters, actionable status, expiring-grant renewal and an owner flow that never asks users to invent webhook URLs.
-4. **Product adapters:** Home Team reliability first; Our Plan's authorized read-only feed, then one human-approved workflow. Vista gets an independent adapter and acceptance gate.
+4. **Product integration quality:** strengthen the existing Home Team, Our Plan and Vista integrations with verified runtime handling, explicit product grants, idempotent workflows and product completion receipts. Each product keeps its own acceptance and release gates.
 
 ## Next: a useful developer ecosystem
 

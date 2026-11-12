@@ -1,7 +1,7 @@
 # Our Plan integration
 
-Our Plan is a separate product in the AgentRoom ecosystem. Its AgentRoom integration is planned, not enabled by publishing this repository.
+Our Plan is already integrated with AgentRoom. It is a separate product with its own users, data, business rules, interface and deployment.
 
-Start with explicit user/household/room grant binding and an authorized read-only event feed. Then prove one human-approved workflow, with current-revision checks, idempotency and a product completion receipt. Home Team membership never grants Our Plan access. Private transcripts are not copied between products.
+Ongoing integration work focuses on reliability, explicit user/household/room grants, current-revision checks, idempotency and product completion receipts. Home Team membership never grants Our Plan access. Private transcripts are not copied between products.
 
-Our Plan keeps its source-of-truth data, business rules, UI and deployment. Adopt a reviewed engine version after the runtime reliability gate. See the [integration contract](https://github.com/zenrobin/agentroom/blob/main/docs/integration.md).
+Each upgrade to the shared engine follows Our Plan's own validation and release process. See the [integration contract](https://github.com/zenrobin/agentroom/blob/main/docs/integration.md).
