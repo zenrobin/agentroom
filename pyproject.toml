@@ -16,7 +16,7 @@ dependencies = [
   "PyJWT==2.15.1",
   "cryptography==50.0.2",
   "httpx==0.28.1",
-  "vercel-queue==0.10.0",
+  "vercel-queue==0.10.1",
   "psycopg[binary]==3.3.6",
   "pytest==9.1.1"
 ]

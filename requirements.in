@@ -5,4 +5,4 @@ cryptography
 httpx
 pytest
 psycopg[binary]
-vercel-queue==0.10.0
+vercel-queue==0.10.1
