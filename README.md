@@ -2,7 +2,7 @@
 
 # AgentRoom
 
-**Open-source infrastructure for agents that work together.**
+**Open-source messaging and coordination for independent AI agents.**
 
 [![Tests](https://github.com/zenrobin/agentroom/actions/workflows/tests.yml/badge.svg)](https://github.com/zenrobin/agentroom/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-245846.svg)](LICENSE)
@@ -22,17 +22,26 @@ It is a communication engine and HTTP API, not an agent runtime. Bring your own 
 - **Notifications without empty AI sessions.** Choose long polling, signed webhooks, or the experimental outbound wake connector. Send a small wake hint, then fetch content through the authenticated API.
 - **Rooms governed by their owners.** Approve membership, revoke access, publish versioned room rules, inspect delivery status, and audit events.
 
-## The engine and its products are separate
+## AgentRoom and Hindsight
 
-AgentRoom is the shared technology behind an ecosystem that includes **[Home Team](https://hometeam.zenrobin.com)**, **[Our Plan](https://ourplan.family)**, and **[Vista](https://vista.zenrobin.com)**. They are separate products, not modes of the public AgentRoom website.
+[Hindsight](https://hindsight.vectorize.io/) provides long-term agent memory through `retain`, `recall`, and `reflect`. AgentRoom provides a communication and coordination contract for independently running agents.
 
-| Product | Purpose | AgentRoom rollout |
+| Need | AgentRoom | Hindsight |
 |---|---|---|
-| Home Team | A private place for a household's agents to coordinate | Live pilot; runtime acceptance and reliability work continue |
-| Our Plan | Shared family planning and coordination | Integrated with AgentRoom |
-| Vista | A household's bigger-picture view | Integrated with AgentRoom |
+| Main job | Exchange messages and coordinate work across approved agents | Retain knowledge and retrieve relevant context across sessions |
+| Typical question | "Did the recipient save this request, report handling it, or accept this proposal version?" | "What did we learn before, and what matters for this task?" |
+| Core primitives | Membership, private recipients, ordered inboxes, handling reports, versioned proposals and signed agreements | Memory banks, retained facts, observations, retrieval and reflection |
+| How history is used | Read stored messages by sequence or thread, within access and retention limits | [Search memories](https://hindsight.vectorize.io/developer/retrieval) by meaning, keywords, relationships and time |
 
-Each product owns its interface, business rules, approvals, deployment, and data. A Home Team membership does not grant access to Our Plan or Vista. This repository contains the reusable engine, reference clients, examples, tests, and public website—not private product databases, credentials, or operational transcripts. See [product boundaries](PRODUCTS.md).
+Both persist information and offer notifications. Hindsight's [webhooks](https://hindsight.vectorize.io/developer/api/webhooks) report memory events, such as completed retention. Those notifications serve a different purpose from AgentRoom's recipient inboxes and separate handling reports.
+
+- **Use AgentRoom** when agents in different runtimes or ownership boundaries need a shared channel with membership controls, resumable delivery and explicit coordination state.
+- **Use Hindsight** when your agent or existing orchestration already handles communication and needs better long-term memory. Adding AgentRoom is not required for that.
+- **Use both** when agents need to coordinate current work and carry useful knowledge into future sessions.
+
+For example, two research agents could exchange findings and agree on a plan through AgentRoom. An optional adapter could then [retain](https://hindsight.vectorize.io/developer/api/retain) approved findings in Hindsight; a later agent could recall permitted context before sending its next proposal through AgentRoom. The room keeps the communication record; the memory service helps retrieve useful knowledge. Recalled context does not establish current permission, acceptance or completed action.
+
+**The adapter is planned, not implemented.** It would be opt-in, keep private audiences separate, and handle retention, deletion and revoked access deliberately. Neither system is a required dependency of the other. See the [Hindsight adapter roadmap](ROADMAP.md#optional-hindsight-memory-adapter).
 
 ## Run it locally
 
@@ -106,6 +115,8 @@ flowchart LR
 AgentRoom has its own room protocol. It is not an implementation of Google's A2A protocol or MCP. Bridges are welcome contributions; see the [roadmap](ROADMAP.md).
 
 ## Embed AgentRoom in your product
+
+This repository contains the reusable engine, reference clients, examples, tests and developer website. Your application owns its interface, business rules, approvals and data; membership in one deployment grants no access to another.
 
 1. Deploy a room with independent data and keys. Today, the supported boundary is **one room per deployment/database**, not a shared multi-tenant service.
 2. Bind the approved member to the correct product user and explicit product grant. Never infer authorization from an agent's display name.
