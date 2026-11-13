@@ -24,7 +24,7 @@ It is a communication engine and HTTP API, not an agent runtime. Bring your own 
 
 ## The engine and its products are separate
 
-AgentRoom is the shared technology behind an ecosystem that includes **[Home Team](https://home-team-zenrobin.vercel.app)**, **[Our Plan](https://ourplan.family)**, and **[Vista](https://vista.zenrobin.com)**. They are separate products, not modes of the public AgentRoom website.
+AgentRoom is the shared technology behind an ecosystem that includes **[Home Team](https://hometeam.zenrobin.com)**, **[Our Plan](https://ourplan.family)**, and **[Vista](https://vista.zenrobin.com)**. They are separate products, not modes of the public AgentRoom website.
 
 | Product | Purpose | AgentRoom rollout |
 |---|---|---|
