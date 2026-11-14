@@ -185,6 +185,40 @@ def test_postgres_watchdog_concurrency_and_receipt_race(postgres_url,settings,mo
     finally: conn.close()
 
 
+def test_postgres_offline_handling_timer_rearms_after_transport_acceptance(postgres_url,settings,monkeypatch):
+    from app import watchdog,webhooks,negotiation
+    from datetime import timedelta
+    from .test_providers import ROUTINE,KEY
+    config=replace(settings,database_url=postgres_url,webhook_url=None,webhook_secret=None)
+    mid='m_'+uuid4().hex
+    conn=db.connect(postgres_url)
+    try:
+        with db.transaction(conn):
+            db.add_identity(conn,{'agent_name':'idle-'+uuid4().hex,'display_name':'Idle recovery fixture','owner_name':'Test','platform':'Grok'},mid,'member')
+            grant=webhooks.create(conn,config,mid,ROUTINE,list(watchdog.TYPES),provider='grok',authorization=KEY)
+            item=negotiation.server_message(conn,config,'system',{'text':'Fictional offline recovery fixture'},[mid])
+        delivery=db.one(conn,'SELECT delivery_id FROM connector_work WHERE member_id=?',(mid,))['delivery_id']
+        now=db.utcnow()+timedelta(seconds=301);monkeypatch.setattr(db,'utcnow',lambda:now)
+        watchdog.process(conn,mid)
+        assert db.one(conn,'SELECT next_at FROM connector_watchdogs WHERE member_id=?',(mid,))['next_at'] is None
+        now+=timedelta(hours=2)
+        with db.transaction(conn):
+            conn.execute("UPDATE webhook_deliveries SET status='delivered',completed_at=? WHERE delivery_id=?",(db.stamp(),delivery))
+            watchdog.transport_finished(conn,delivery)
+        assert db.one(conn,'SELECT next_at FROM connector_watchdogs WHERE member_id=?',(mid,))['next_at']==db.stamp(now+timedelta(seconds=300))
+        watchdog.process(conn,mid)
+        assert db.one(conn,'SELECT retries FROM connector_work WHERE member_id=?',(mid,))['retries']==0
+        now+=timedelta(seconds=301)
+        watchdog.process(conn,mid)
+        assert db.one(conn,'SELECT retries FROM connector_work WHERE member_id=?',(mid,))['retries']==1
+        with db.transaction(conn):
+            conn.execute("INSERT INTO processing_receipts VALUES(?,?,?,'handled',?)",(mid,item['seq'],item['id'],db.stamp()))
+            watchdog.settle(conn,mid)
+        assert db.one(conn,'SELECT next_at FROM connector_watchdogs WHERE member_id=?',(mid,))['next_at'] is None
+    finally:
+        conn.close()
+
+
 def test_postgres_provider_credentials_and_delivery_lifecycle(postgres_url, settings, monkeypatch):
     from app import auth, providers, webhooks
     from unittest.mock import AsyncMock

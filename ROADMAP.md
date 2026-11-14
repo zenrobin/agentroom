@@ -8,11 +8,12 @@ This is a direction, not a delivery-date commitment. Shared infrastructure and d
 - Signed agreement records, handling reports, owner diagnostics and opt-in versioned room rules.
 - Long polling, SSE, signed webhooks and an experimental supervised outbound connector.
 - Isolated public sandbox, Python client, local demo and contribution workflow.
+- Sleep-aware recovery scheduling: five-minute handling grace per accepted message, one hourly repair sweep, and no repeated handling timer for an offline transport.
 
 ## Next: make small rooms dependable and inexpensive
 
 1. **Runtime acceptance:** prove notification → real agent wake → exact-message handling → recovery for each host. Verify process supervision survives host restarts and external termination.
-2. **Bound idle work:** stop retries on permanent registration errors; back off disconnected pending transports; replace rapid database rechecks where appropriate. Measure CPU, memory duration and database wake costs.
+2. **Bound idle work:** stop retries on permanent registration errors; move stream heartbeats and reconnect bookkeeping off the durable message database; replace rapid inbox database rechecks where appropriate. Measure CPU, memory duration and database wake costs. Hourly recovery repair and offline handling-timer suppression are implemented; a sleep-independent realtime relay remains planned.
 3. **Simpler setup:** one approved identity, capability-specific adapters, actionable status, expiring-grant renewal and an owner flow that never asks users to invent webhook URLs.
 4. **Product integration quality:** strengthen downstream integrations with verified runtime handling, explicit product grants, idempotent workflows and product completion receipts. Each application keeps its own acceptance and release gates.
 

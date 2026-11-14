@@ -141,6 +141,7 @@ def received(conn, actor, sid, delivery_id, event_id, cycle):
         raise APIError(425,'processing_in_progress',headers={'Retry-After':'25'})
     conn.execute("UPDATE webhook_deliveries SET status='delivered',completed_at=?,last_error=NULL WHERE delivery_id=? AND status='pending'",
                  (db.stamp(),delivery_id))
+    watchdog.transport_finished(conn,delivery_id)
     return {'status':'wake_saved', 'meaning':'Notification saved; message handling is still unconfirmed.'}
 
 

@@ -31,6 +31,12 @@ def report(conn,member,item,outcome='handled'):
     conn.execute('INSERT INTO processing_receipts VALUES(?,?,?,?,?)',(member['member_id'],item['seq'],item['id'],outcome,db.stamp()))
 
 
+def healthy_server(conn):
+    for name,at in [('watchdog_sweep_observed',db.stamp()),
+                    ('watchdog_sweep_enqueued',db.stamp(db.utcnow()+timedelta(seconds=watchdog.REPAIR_INTERVAL)))]:
+        conn.execute('INSERT INTO operations_leases VALUES(?,?)',(name,at))
+
+
 def work(conn):
     return db.rows(conn,'SELECT * FROM connector_work ORDER BY message_seq')
 
@@ -143,6 +149,8 @@ def test_transport_still_pending_gets_no_second_wake_and_grace_starts_at_accepta
     assert work(conn)[0]['retries']==0
     advance(monkeypatch,301)
     conn.execute("UPDATE webhook_deliveries SET status='delivered',completed_at=?",(db.stamp(),))
+    with db.transaction(conn):
+        watchdog.transport_finished(conn,db.one(conn,'SELECT delivery_id FROM webhook_deliveries')['delivery_id'])
     watchdog.process(conn,b['member_id']);assert work(conn)[0]['retries']==0
     advance(monkeypatch,301);watchdog.process(conn,b['member_id'])
     assert work(conn)[0]['retries']==1
@@ -181,18 +189,98 @@ def test_failed_publish_remains_recoverable_and_sweep_republishes_overdue(pilot,
     assert send.call_args.args[1]=={'member_id':b['member_id']}
 
 
-def test_server_heartbeat_is_one_delayed_code_job_not_an_agent_wake(client,conn,settings,monkeypatch):
+def test_idle_repair_job_runs_hourly_without_changing_message_grace(client,conn,settings,monkeypatch):
     sender=AsyncMock()
     monkeypatch.setattr('vercel.queue.QueueClient.send',sender)
     remote=replace(settings,serverless=True)
     asyncio.run(watchdog.ensure_sweep(remote));asyncio.run(watchdog.ensure_sweep(remote))
     assert sender.call_count==1
     assert sender.call_args.args==(watchdog.TOPIC,{'sweep':True})
-    assert 0<sender.call_args.kwargs['delay']<=300
+    assert 0<sender.call_args.kwargs['delay']<=watchdog.REPAIR_INTERVAL
+    assert watchdog.GRACE==300
+    first_due=db.one(conn,"SELECT updated_at FROM operations_leases WHERE name='watchdog_sweep_enqueued'")['updated_at']
     advance(monkeypatch,301)
+    asyncio.run(watchdog.ensure_sweep(remote))
+    # Scheduling near the end of an hour can legitimately cross the boundary.
+    if db.stamp()<first_due:
+        assert sender.call_count==1
+    advance(monkeypatch,watchdog.REPAIR_INTERVAL)
+    sender.reset_mock()
     asyncio.run(watchdog.consume(remote,{'sweep':True}))
-    assert sender.call_count==2
+    assert sender.call_count==1
+    assert sender.call_args.args==(watchdog.TOPIC,{'sweep':True})
     assert db.one(conn,"SELECT * FROM operations_leases WHERE name='watchdog_sweep_observed'")
+
+
+def test_offline_transport_stops_handling_jobs_and_rearms_after_acceptance(pilot,conn,settings,monkeypatch):
+    _,b,_,_=pilot
+    delivery=db.one(conn,'SELECT delivery_id FROM webhook_deliveries')['delivery_id']
+    conn.execute("UPDATE webhook_deliveries SET status='pending',completed_at=NULL")
+    advance(monkeypatch,301)
+    watchdog.process(conn,b['member_id'])
+    assert db.one(conn,'SELECT next_at FROM connector_watchdogs')['next_at'] is None
+    assert work(conn)[0]['status']=='waiting' and work(conn)[0]['retries']==0
+    advance(monkeypatch,7200)
+    watchdog.process(conn,b['member_id'])
+    with db.transaction(conn):
+        conn.execute("UPDATE webhook_deliveries SET status='delivered',completed_at=?",(db.stamp(),))
+        watchdog.transport_finished(conn,delivery)
+    assert db.one(conn,'SELECT next_at FROM connector_watchdogs')['next_at']==db.stamp(db.utcnow()+timedelta(seconds=300))
+    watchdog.process(conn,b['member_id'])
+    assert work(conn)[0]['retries']==0
+    advance(monkeypatch,301)
+    watchdog.process(conn,b['member_id'])
+    assert work(conn)[0]['retries']==1
+
+
+def test_repair_recovers_crash_after_transport_completion(client,enroll,send,conn,settings,monkeypatch):
+    monkeypatch.setattr(webhooks,'post',AsyncMock(return_value=200))
+    a,b=enroll(),enroll()
+    grok(client,b)
+    assert send(a,to=[b['member_id']]).status_code==201
+    conn.execute("UPDATE webhook_deliveries SET status='pending',completed_at=NULL")
+    advance(monkeypatch,301);watchdog.process(conn,b['member_id'])
+    assert db.one(conn,'SELECT next_at FROM connector_watchdogs')['next_at'] is None
+    conn.execute("UPDATE webhook_deliveries SET status='delivered',completed_at=?",(db.stamp(),))
+    sender=AsyncMock()
+    monkeypatch.setattr('vercel.queue.QueueClient.send',sender)
+    asyncio.run(watchdog.kick(replace(settings,serverless=True),rescue=True,strict=True))
+    assert any(call.args[1]=={'member_id':b['member_id']} for call in sender.call_args_list)
+    assert db.one(conn,'SELECT next_at FROM connector_watchdogs')['next_at'] is not None
+
+
+def test_late_transport_acceptance_publishes_recovery_and_retries_failed_publish(client,enroll,send,conn,settings,monkeypatch):
+    monkeypatch.setattr(webhooks,'post',AsyncMock(return_value=503))
+    a,b=enroll(),enroll()
+    grok(client,b)
+    assert send(a,to=[b['member_id']]).status_code==201
+    delivery=db.one(conn,'SELECT delivery_id FROM webhook_deliveries')['delivery_id']
+    advance(monkeypatch,301);watchdog.process(conn,b['member_id'])
+    assert db.one(conn,'SELECT next_at FROM connector_watchdogs')['next_at'] is None
+    monkeypatch.setattr(webhooks,'post',AsyncMock(return_value=200))
+    sender=AsyncMock(side_effect=RuntimeError('queue unavailable'))
+    monkeypatch.setattr('vercel.queue.QueueClient.send',sender)
+    remote=replace(settings,serverless=True)
+    with pytest.raises(RuntimeError):
+        asyncio.run(webhooks.consume(remote,delivery))
+    assert db.one(conn,'SELECT status FROM webhook_deliveries')['status']=='delivered'
+    assert db.one(conn,'SELECT next_at FROM connector_watchdogs')['next_at'] is not None
+    sender.side_effect=None
+    asyncio.run(webhooks.consume(remote,delivery))
+    assert any(call.args[1]=={'member_id':b['member_id']} for call in sender.call_args_list)
+
+
+def test_hourly_health_requires_recent_worker_and_a_future_repair_job(pilot,conn,monkeypatch):
+    _,b,_,_=pilot
+    healthy_server(conn)
+    advance(monkeypatch,1800)
+    assert watchdog.status(conn,b['member_id'])['server_healthy']
+    advance(monkeypatch,1801)
+    assert not watchdog.status(conn,b['member_id'])['server_healthy']
+    conn.execute("UPDATE operations_leases SET updated_at=? WHERE name='watchdog_sweep_enqueued'",
+                 (db.stamp(db.utcnow()+timedelta(seconds=3600)),))
+    advance(monkeypatch,watchdog.HEALTH_WINDOW)
+    assert not watchdog.status(conn,b['member_id'])['server_healthy']
 
 
 def test_server_mode_requires_fresh_handling_server_health_and_full_coverage(pilot,client,conn):
@@ -201,7 +289,7 @@ def test_server_mode_requires_fresh_handling_server_health_and_full_coverage(pil
     assert client.post(path,headers=b['headers'],json={}).status_code==409
     report(conn,b,item)
     assert client.post(path,headers=b['headers'],json={}).status_code==409
-    conn.execute("INSERT INTO operations_leases VALUES('watchdog_sweep_observed',?)",(db.stamp(),))
+    healthy_server(conn)
     result=client.post(path,headers=b['headers'],json={})
     assert result.status_code==200,result.text
     assert result.json()['recovery']['can_disable_scheduled_recovery']
@@ -227,7 +315,7 @@ def test_changed_routine_requires_new_current_generation_proof(pilot,client,conn
     from tests.test_providers import ROUTINE,KEY
     _,b,sid,item=pilot
     report(conn,b,item)
-    conn.execute("INSERT INTO operations_leases VALUES('watchdog_sweep_observed',?)",(db.stamp(),))
+    healthy_server(conn)
     path='/v1/connector/server-recovery'
     assert client.post(path,headers=b['headers'],json={}).status_code==200
     base='/v1/owner/webhooks/'+sid
@@ -246,7 +334,7 @@ def test_readiness_cannot_transfer_to_an_untested_second_grant(pilot,client,conn
     _,b,sid,item=pilot
     grok(client,b)
     report(conn,b,item)
-    conn.execute("INSERT INTO operations_leases VALUES('watchdog_sweep_observed',?)",(db.stamp(),))
+    healthy_server(conn)
     path='/v1/connector/server-recovery'
     assert client.post(path,headers=b['headers'],json={}).status_code==200
     conn.execute("UPDATE webhook_subscriptions SET expires_at='2000-01-01T00:00:00.000Z' WHERE subscription_id=?",(sid,))
