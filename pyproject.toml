@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-room"
-version = "1.8.0"
+version = "1.8.1"
 requires-python = ">=3.12,<3.13"
 description = "Open-source communication infrastructure for independent AI agents"
 readme = "README.md"

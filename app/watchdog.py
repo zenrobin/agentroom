@@ -12,6 +12,10 @@ from . import db, webhooks, outbound
 
 TOPIC = 'agent-room-recovery'
 GRACE = 300
+# A repair sweep recovers lost queue jobs. It is not the per-message retry
+# clock: quiet rooms must have time to pass the database's idle timeout.
+REPAIR_INTERVAL = 3600
+HEALTH_WINDOW = REPAIR_INTERVAL + 2 * GRACE
 RETRY_DELAYS = (300, 900, 1800)
 MAX_RETRIES = len(RETRY_DELAYS)
 TYPES = {'chat','request','response','event','propose','counter','accept','decline','withdraw','commit','expire','system'}
@@ -40,6 +44,42 @@ def outstanding(conn, mid, *, through=None):
 def settle(conn, mid):
     conn.execute('''UPDATE connector_work SET status='resolved' WHERE member_id=? AND status IN ('waiting','attention')
         AND EXISTS(SELECT 1 FROM processing_receipts p WHERE p.member_id=connector_work.member_id AND p.message_seq=connector_work.message_seq)''', (mid,))
+    conn.execute('''UPDATE connector_watchdogs SET next_at=NULL,revision=revision+1
+        WHERE member_id=? AND next_at IS NOT NULL AND NOT EXISTS(
+            SELECT 1 FROM connector_work w WHERE w.member_id=connector_watchdogs.member_id AND w.status='waiting')''', (mid,))
+
+
+def transport_finished(conn, delivery_id):
+    """Arm handling recovery after transport completion, under the room lock.
+
+    Pending transports have their own retry mechanism (or await an outbound
+    reconnect). They must not create an endless handling-recovery timer.
+    """
+    item = db.one(conn, '''SELECT w.*,d.status AS delivery_status,d.completed_at
+        FROM connector_work w JOIN webhook_deliveries d ON d.delivery_id=w.delivery_id
+        WHERE w.delivery_id=? AND w.status='waiting' AND d.status!='pending'
+        AND NOT EXISTS(SELECT 1 FROM processing_receipts p
+            WHERE p.member_id=w.member_id AND p.message_seq=w.message_seq)''', (delivery_id,))
+    if not item:
+        return
+    due = max(item['next_at'], db.stamp(db.parse(item['completed_at'])+timedelta(seconds=GRACE))) if item['delivery_status']=='delivered' and item['completed_at'] else db.stamp()
+    conn.execute('UPDATE connector_work SET next_at=? WHERE member_id=? AND message_seq=?',
+                 (due,item['member_id'],item['message_seq']))
+    conn.execute('''UPDATE connector_watchdogs SET next_at=?,revision=revision+1 WHERE member_id=?
+        AND (next_at IS NULL OR next_at>?)''', (due,item['member_id'],due))
+
+
+def repair_transports(conn):
+    """Recover a crash between saving a transport result and arming recovery."""
+    rows = db.rows(conn, '''SELECT w.delivery_id FROM connector_work w
+        JOIN connector_watchdogs s ON s.member_id=w.member_id
+        JOIN webhook_deliveries d ON d.delivery_id=w.delivery_id
+        WHERE s.next_at IS NULL AND w.status='waiting' AND d.status!='pending'
+        AND NOT EXISTS(SELECT 1 FROM processing_receipts p
+            WHERE p.member_id=w.member_id AND p.message_seq=w.message_seq)
+        ORDER BY w.next_at LIMIT 100''')
+    for row in rows:
+        transport_finished(conn,row['delivery_id'])
 
 
 def before_delivery(conn, row):
@@ -82,14 +122,17 @@ def process(conn, mid):
                 continue
             if item['status'] == 'attention':
                 continue
+            if item['delivery_status'] == 'pending':
+                # HTTP delivery has bounded transport retries. An outbound
+                # hint stays durable until reconnect. Neither needs repeated
+                # handling checks before the receiver accepts the wake.
+                continue
             if item['delivery_status'] in {'failed','cancelled'}:
                 conn.execute("UPDATE connector_work SET status='attention' WHERE member_id=? AND message_seq=?", (mid,item['message_seq']))
                 db.audit(conn,'room','connector.needs_attention',mid,detail='transport_failed')
                 continue
             check_at = item['next_at']
-            if item['delivery_status'] == 'pending':
-                check_at = max(check_at, db.stamp(db.utcnow()+timedelta(seconds=GRACE)))
-            elif item['completed_at']:
+            if item['completed_at']:
                 check_at = max(check_at, db.stamp(db.parse(item['completed_at'])+timedelta(seconds=GRACE)))
             if state['busy_until']:
                 check_at = max(check_at, state['busy_until'])
@@ -127,7 +170,7 @@ async def dispatch(settings, state, *, rescue=False):
     from vercel.queue import QueueClient
     delay = max(0,math.ceil((db.parse(state['next_at'])-db.utcnow()).total_seconds()))
     # Rescue keys change each sweep, recovering an exhausted/lost queue callback.
-    suffix = ':rescue:'+str(int(db.utcnow().timestamp())//GRACE) if rescue else ''
+    suffix = ':rescue:'+str(int(db.utcnow().timestamp())//REPAIR_INTERVAL) if rescue else ''
     await QueueClient(region='iad1',timeout=5).send(TOPIC, {'member_id':state['member_id']},
         idempotency_key=f"watch:{state['member_id']}:{state['revision']}"+suffix,
         delay=delay,retention=timedelta(days=7))
@@ -140,7 +183,7 @@ async def dispatch(settings, state, *, rescue=False):
 
 
 async def ensure_sweep(settings):
-    """One cheap recurring server check; no AI session and no new hosting plan."""
+    """One hourly repair job; individual messages keep their five-minute grace."""
     if not settings.serverless:
         return
     conn=db.connect(db.target(settings))
@@ -148,11 +191,11 @@ async def ensure_sweep(settings):
         saved=db.one(conn,"SELECT updated_at FROM operations_leases WHERE name='watchdog_sweep_enqueued'")
         if saved and saved['updated_at']>db.stamp():
             return
-        slot=int(db.utcnow().timestamp())//GRACE+1
-        due=datetime.fromtimestamp(slot*GRACE,tz=db.utcnow().tzinfo)
+        slot=int(db.utcnow().timestamp())//REPAIR_INTERVAL+1
+        due=datetime.fromtimestamp(slot*REPAIR_INTERVAL,tz=db.utcnow().tzinfo)
         from vercel.queue import QueueClient
         await QueueClient(region='iad1',timeout=5).send(TOPIC,{'sweep':True},
-            idempotency_key='watchdog-sweep:'+str(slot),delay=max(0,math.ceil((due-db.utcnow()).total_seconds())),retention=timedelta(days=7))
+            idempotency_key='watchdog-repair-v2:'+str(slot),delay=max(0,math.ceil((due-db.utcnow()).total_seconds())),retention=timedelta(days=7))
         conn.execute("""INSERT INTO operations_leases VALUES('watchdog_sweep_enqueued',?)
             ON CONFLICT(name) DO UPDATE SET updated_at=excluded.updated_at
             WHERE operations_leases.updated_at<excluded.updated_at""",(db.stamp(due),))
@@ -165,6 +208,9 @@ async def kick(settings, *, strict=False, rescue=False):
         await ensure_sweep(settings)
         conn=db.connect(db.target(settings))
         try:
+            if rescue:
+                with db.transaction(conn):
+                    repair_transports(conn)
             states=db.rows(conn,'''SELECT * FROM connector_watchdogs WHERE next_at IS NOT NULL AND
                 (enqueued_revision<revision''' + (' OR next_at<?' if rescue else '') + ') ORDER BY next_at LIMIT 30',
                 (db.stamp(db.utcnow()-timedelta(seconds=60)),) if rescue else ())
@@ -183,7 +229,7 @@ async def kick(settings, *, strict=False, rescue=False):
 
 
 async def consume(settings, payload):
-    # Schedule the next heartbeat even if a particular member's work fails.
+    # Keep rare repair checks independent of per-message delivery/handling jobs.
     await ensure_sweep(settings)
     if payload.get('sweep'):
         await kick(settings,strict=True,rescue=True)
@@ -216,7 +262,9 @@ def status(conn, mid):
     state=db.one(conn,'SELECT * FROM connector_watchdogs WHERE member_id=?',(mid,))
     items=outstanding(conn,mid)
     observed=db.one(conn,"SELECT updated_at FROM operations_leases WHERE name='watchdog_sweep_observed'")
-    healthy=bool(observed and observed['updated_at']>db.stamp(db.utcnow()-timedelta(minutes=10)))
+    scheduled=db.one(conn,"SELECT updated_at FROM operations_leases WHERE name='watchdog_sweep_enqueued'")
+    healthy=bool(observed and observed['updated_at']>db.stamp(db.utcnow()-timedelta(seconds=HEALTH_WINDOW))
+                 and scheduled and scheduled['updated_at']>db.stamp())
     subs=db.rows(conn,"""SELECT s.* FROM webhook_subscriptions s
         WHERE s.member_id=? AND s.enabled=1 AND s.deleted_at IS NULL
         AND (EXISTS(SELECT 1 FROM webhook_provider_credentials p WHERE p.subscription_id=s.subscription_id AND p.provider='grok')
@@ -227,6 +275,7 @@ def status(conn, mid):
         and covers_inbox(conn,s) and outbound.runtime_verified(conn,s['subscription_id']) for s in subs))
     attention=sum(w['status']=='attention' for w in items)
     return {'available':True,'scope':'new Grok and outbound connector message notifications','server_healthy':healthy,
+        'repair_interval_s':REPAIR_INTERVAL,'next_server_check':scheduled['updated_at'] if scheduled else None,
         'last_server_check':observed['updated_at'] if observed else None,'full_inbox_coverage':full,
         'pending':len(items)-attention,'needs_attention':attention,'max_retries':MAX_RETRIES,
         'next_check_at':state['next_at'] if state else None,'last_retry_at':state['last_retry_at'] if state else None,

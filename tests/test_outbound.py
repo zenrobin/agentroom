@@ -9,7 +9,7 @@ from uuid import uuid4
 import pytest
 
 from app import db, outbound, watchdog, webhooks
-from tests.test_watchdog import advance, report
+from tests.test_watchdog import advance, report, healthy_server
 
 
 def register(client,member,device=None):
@@ -163,7 +163,7 @@ def test_rollback_removes_active_and_deleted_transport_only(pilot,client,conn):
 
 def test_readiness_requires_actual_receipt_runtime_and_recent_connection(pilot,client,conn):
     _,b,sid,item=pilot
-    conn.execute("INSERT INTO operations_leases VALUES('watchdog_sweep_observed',?)",(db.stamp(),))
+    healthy_server(conn)
     endpoint='/v1/connector/server-recovery'
     assert client.post(endpoint,headers=b['headers']).status_code==409
     assert received(client,b,sid,hints(conn,b,sid)[0]).status_code==200

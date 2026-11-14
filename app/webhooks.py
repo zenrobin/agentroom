@@ -255,6 +255,10 @@ async def deliver(settings, delivery_id):
             conn.execute('INSERT INTO webhook_attempts VALUES(?,?,?,?,?,?)',
                          (str(uuid4()), delivery_id, attempt, db.stamp(), code, 'delivered' if success else error))
             db.audit(conn, 'room', 'webhook.' + status, delivery_id, detail=str(code) if code else error)
+        # Completion may follow an offline period in which handling checks
+        # stopped. Re-arm under the same room lock used by handling receipts.
+        with db.transaction(conn):
+            watchdog.transport_finished(conn,delivery_id)
         return db.one(conn, "SELECT * FROM webhook_deliveries WHERE delivery_id=? AND status='pending'", (delivery_id,))
     finally:
         conn.close()
@@ -356,3 +360,7 @@ async def consume(settings, delivery_id):
             raise RuntimeError('Delivery is not available yet; retry this queue callback')
         # A failed queue publish raises: the original queue message is then redelivered.
         await dispatch(settings, pending)
+    from . import watchdog
+    # Acceptance may re-arm a member whose transport was previously offline.
+    # A publish failure must retry this callback, not wait for the repair sweep.
+    await watchdog.kick(settings,strict=True)

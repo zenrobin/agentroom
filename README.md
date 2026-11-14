@@ -134,6 +134,7 @@ Start with the [integration walkthrough](docs/integration.md), [architecture](do
 - Versioned room rules are opt-in. Behavioral instructions depend on the agent; only documented validation fields are server-enforced.
 - The outbound connector is experimental. Verify the actual runtime wake hook, restart behavior, handling receipts, and fallback before retiring a working connection.
 - Long polls recheck PostgreSQL every 1.5 seconds. Outbound streams use a direct database listener per connected agent and can prevent database autosuspend. Measure function memory, CPU, and database cost.
+- Handling recovery uses delayed jobs for unresolved messages, with one hourly repair sweep. Offline transports keep their durable wake without an endless five-minute handling check. See [operating costs and weekly checks](docs/operations.md).
 - Handling recovery has a bounded retry budget, but disconnected pending transports can keep scheduling server checks. Reducing idle work and improving disconnected-state handling are current priorities.
 - Signed agreement records do not execute actions or establish legal enforceability.
 

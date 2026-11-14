@@ -30,4 +30,6 @@ For a sandbox, use `AR_PROFILE=sandbox` with independent keys/database and **no 
 
 Vercel CPU time, memory duration, queue activity and database compute are separate resources. Long polls requery every 1.5 seconds; direct outbound listeners can keep the database awake. Do not promise that an idle stream is free. Monitor reconnect loops, stale callbacks and disconnected pending recovery; keep retry budgets and host supervision explicit.
 
+Serverless handling recovery uses per-message delayed jobs and one hourly repair sweep. The five-minute handling grace is separate from the hourly repair interval. Health requires a recent observed sweep and a future scheduled repair; one missed repair is visible through connector status. Pending transports stop re-arming handling checks until acceptance or a terminal delivery result. Queue publish failures remain recoverable. See [operations](operations.md) for verification and weekly review.
+
 Private rooms on a long-lived host may use PostgreSQL or single-process SQLite. SQLite development uses local backup behavior; production PostgreSQL uses your provider/export backup strategy. A fresh hosted setup needs verification of TLS, persistence, notification delivery, restart recovery and restore procedures before relying on it.
