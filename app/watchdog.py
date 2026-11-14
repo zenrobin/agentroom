@@ -188,8 +188,8 @@ async def ensure_sweep(settings):
         return
     conn=db.connect(db.target(settings))
     try:
-        saved=db.one(conn,"SELECT updated_at FROM operations_leases WHERE name='watchdog_sweep_enqueued'")
-        if saved and saved['updated_at']>db.stamp():
+        migrated=db.one(conn,"SELECT updated_at FROM operations_leases WHERE name='watchdog_hourly_schedule'")
+        if migrated and migrated['updated_at']>db.stamp():
             return
         slot=int(db.utcnow().timestamp())//REPAIR_INTERVAL+1
         due=datetime.fromtimestamp(slot*REPAIR_INTERVAL,tz=db.utcnow().tzinfo)
@@ -197,6 +197,13 @@ async def ensure_sweep(settings):
         await QueueClient(region='iad1',timeout=5).send(TOPIC,{'sweep':True},
             idempotency_key='watchdog-repair-v2:'+str(slot),delay=max(0,math.ceil((due-db.utcnow()).total_seconds())),retention=timedelta(days=7))
         conn.execute("""INSERT INTO operations_leases VALUES('watchdog_sweep_enqueued',?)
+            ON CONFLICT(name) DO UPDATE SET updated_at=excluded.updated_at
+            WHERE operations_leases.updated_at<excluded.updated_at""",(db.stamp(due),))
+        # Queue jobs stay pinned to their publishing deployment. Reserve the
+        # hourly slot even if a pre-upgrade five-minute job is still reserved.
+        # That old job sees this future reservation, acknowledges, and stops
+        # re-arming its immutable old deployment. Mark only after publication.
+        conn.execute("""INSERT INTO operations_leases VALUES('watchdog_hourly_schedule',?)
             ON CONFLICT(name) DO UPDATE SET updated_at=excluded.updated_at
             WHERE operations_leases.updated_at<excluded.updated_at""",(db.stamp(due),))
     finally:
@@ -262,7 +269,7 @@ def status(conn, mid):
     state=db.one(conn,'SELECT * FROM connector_watchdogs WHERE member_id=?',(mid,))
     items=outstanding(conn,mid)
     observed=db.one(conn,"SELECT updated_at FROM operations_leases WHERE name='watchdog_sweep_observed'")
-    scheduled=db.one(conn,"SELECT updated_at FROM operations_leases WHERE name='watchdog_sweep_enqueued'")
+    scheduled=db.one(conn,"SELECT updated_at FROM operations_leases WHERE name='watchdog_hourly_schedule'")
     healthy=bool(observed and observed['updated_at']>db.stamp(db.utcnow()-timedelta(seconds=HEALTH_WINDOW))
                  and scheduled and scheduled['updated_at']>db.stamp())
     subs=db.rows(conn,"""SELECT s.* FROM webhook_subscriptions s
@@ -276,6 +283,7 @@ def status(conn, mid):
     attention=sum(w['status']=='attention' for w in items)
     return {'available':True,'scope':'new Grok and outbound connector message notifications','server_healthy':healthy,
         'repair_interval_s':REPAIR_INTERVAL,'next_server_check':scheduled['updated_at'] if scheduled else None,
+        'hourly_schedule_active':bool(scheduled and scheduled['updated_at']>db.stamp()),
         'last_server_check':observed['updated_at'] if observed else None,'full_inbox_coverage':full,
         'pending':len(items)-attention,'needs_attention':attention,'max_retries':MAX_RETRIES,
         'next_check_at':state['next_at'] if state else None,'last_retry_at':state['last_retry_at'] if state else None,

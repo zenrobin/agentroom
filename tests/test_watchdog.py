@@ -33,6 +33,7 @@ def report(conn,member,item,outcome='handled'):
 
 def healthy_server(conn):
     for name,at in [('watchdog_sweep_observed',db.stamp()),
+                    ('watchdog_hourly_schedule',db.stamp(db.utcnow()+timedelta(seconds=watchdog.REPAIR_INTERVAL))),
                     ('watchdog_sweep_enqueued',db.stamp(db.utcnow()+timedelta(seconds=watchdog.REPAIR_INTERVAL)))]:
         conn.execute('INSERT INTO operations_leases VALUES(?,?)',(name,at))
 
@@ -233,6 +234,31 @@ def test_offline_transport_stops_handling_jobs_and_rearms_after_acceptance(pilot
     assert work(conn)[0]['retries']==1
 
 
+def test_upgrade_takes_schedule_from_a_pinned_legacy_deployment(client,conn,settings,monkeypatch):
+    from datetime import datetime,timezone
+    now=datetime(2026,11,14,12,10,tzinfo=timezone.utc)
+    monkeypatch.setattr(db,'utcnow',lambda:now)
+    legacy_due=db.stamp(now+timedelta(seconds=300))
+    conn.execute("INSERT INTO operations_leases VALUES('watchdog_sweep_enqueued',?)",(legacy_due,))
+    sender=AsyncMock(side_effect=RuntimeError('queue unavailable'))
+    monkeypatch.setattr('vercel.queue.QueueClient.send',sender)
+    remote=replace(settings,serverless=True)
+    with pytest.raises(RuntimeError):asyncio.run(watchdog.ensure_sweep(remote))
+    assert not db.one(conn,"SELECT 1 FROM operations_leases WHERE name='watchdog_hourly_schedule'")
+    assert db.one(conn,"SELECT updated_at FROM operations_leases WHERE name='watchdog_sweep_enqueued'")['updated_at']==legacy_due
+    sender.side_effect=None;sender.reset_mock()
+    asyncio.run(watchdog.ensure_sweep(remote))
+    assert sender.call_count==1 and sender.call_args.kwargs['delay']==3000
+    assert db.one(conn,"SELECT updated_at FROM operations_leases WHERE name='watchdog_sweep_enqueued'")['updated_at']==db.stamp(now+timedelta(seconds=3000))
+    assert db.one(conn,"SELECT 1 FROM operations_leases WHERE name='watchdog_hourly_schedule'")
+    # The old deployment's existing future-lease guard prevents it publishing
+    # another five-minute child. A second new-version kick also publishes none.
+    now+=timedelta(seconds=301)
+    assert db.one(conn,"SELECT updated_at FROM operations_leases WHERE name='watchdog_sweep_enqueued'")['updated_at']>db.stamp()
+    asyncio.run(watchdog.ensure_sweep(remote))
+    assert sender.call_count==1
+
+
 def test_repair_recovers_crash_after_transport_completion(client,enroll,send,conn,settings,monkeypatch):
     monkeypatch.setattr(webhooks,'post',AsyncMock(return_value=200))
     a,b=enroll(),enroll()
@@ -277,10 +303,24 @@ def test_hourly_health_requires_recent_worker_and_a_future_repair_job(pilot,conn
     assert watchdog.status(conn,b['member_id'])['server_healthy']
     advance(monkeypatch,1801)
     assert not watchdog.status(conn,b['member_id'])['server_healthy']
-    conn.execute("UPDATE operations_leases SET updated_at=? WHERE name='watchdog_sweep_enqueued'",
+    conn.execute("UPDATE operations_leases SET updated_at=? WHERE name='watchdog_hourly_schedule'",
                  (db.stamp(db.utcnow()+timedelta(seconds=3600)),))
     advance(monkeypatch,watchdog.HEALTH_WINDOW)
     assert not watchdog.status(conn,b['member_id'])['server_healthy']
+
+
+def test_hourly_callback_cannot_be_suppressed_by_a_late_legacy_reservation(client,conn,settings,monkeypatch):
+    from datetime import datetime,timezone
+    now=datetime(2026,11,14,13,0,tzinfo=timezone.utc)
+    monkeypatch.setattr(db,'utcnow',lambda:now)
+    conn.execute("INSERT INTO operations_leases VALUES('watchdog_sweep_enqueued',?)",(db.stamp(now+timedelta(seconds=300)),))
+    conn.execute("INSERT INTO operations_leases VALUES('watchdog_hourly_schedule',?)",(db.stamp(now),))
+    sender=AsyncMock()
+    monkeypatch.setattr('vercel.queue.QueueClient.send',sender)
+    asyncio.run(watchdog.ensure_sweep(replace(settings,serverless=True)))
+    assert sender.call_count==1 and sender.call_args.kwargs['delay']==3600
+    for name in ['watchdog_sweep_enqueued','watchdog_hourly_schedule']:
+        assert db.one(conn,'SELECT updated_at FROM operations_leases WHERE name=?',(name,))['updated_at']==db.stamp(now+timedelta(seconds=3600))
 
 
 def test_server_mode_requires_fresh_handling_server_health_and_full_coverage(pilot,client,conn):
